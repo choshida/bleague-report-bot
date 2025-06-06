@@ -3,32 +3,22 @@ from playwright.sync_api import sync_playwright
 
 logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
 
-def scrape_ryukyu_with_playwright():
-    logging.info("🏀 琉球ゴールデンキングス（Playwright）")
+def scrape_with_screenshot():
+    logging.info("🖼️ 琉球ゴールデンキングス - screenshot撮影中")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page()
+            page = browser.new_page(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
             page.goto("https://goldenkings.jp/news/", timeout=20000)
             page.wait_for_load_state("networkidle")
-            page.mouse.wheel(0, 5000)  # スクロールでJS読み込み促進
 
-            page.wait_for_selector(".newsList_item", timeout=30000, state="attached")
-
-            items = page.query_selector_all(".newsList_item")[:5]
-            logging.info(f"記事数: {len(items)}")
-
-            for item in items:
-                title = item.query_selector(".newsList_title").inner_text().strip()
-                date = item.query_selector(".newsList_date").inner_text().strip()
-                link = item.query_selector("a").get_attribute("href")
-                full_url = f"https://goldenkings.jp{link}"
-                print(f"{date}｜{title}\n→ {full_url}\n")
+            page.screenshot(path="screenshot.png", full_page=True)
+            logging.info("✅ screenshot.png を保存しました")
 
             browser.close()
 
     except Exception as e:
-        logging.error(f"Playwrightでの取得に失敗：{e}")
+        logging.error(f"スクリーンショット撮影に失敗：{e}")
 
 if __name__ == "__main__":
-    scrape_ryukyu_with_playwright()
+    scrape_with_screenshot()
