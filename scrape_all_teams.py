@@ -1,8 +1,11 @@
 import requests
-import feedparser
 from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
+import logging
 
-# チーム設定：typeに応じてrss or scrapeを使い分け
+logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+
+# チーム設定（琉球＝RSS、他2チーム＝HTML）
 TEAMS = {
     "琉球ゴールデンキングス": {
         "type": "rss",
@@ -28,33 +31,40 @@ TEAMS = {
     }
 }
 
-# RSS方式
+# RSS取得（User-Agent付き）
 def scrape_from_rss(team_name, rss_url):
-    print(f"\n📡 {team_name}（RSS）")
-    print("-" * 40)
-    feed = feedparser.parse(rss_url)
-    if not feed.entries:
-        print("⚠️ RSSが空です")
-    for entry in feed.entries[:5]:
-        published = entry.get("published", "日付不明")
-        title = entry.get("title", "タイトル不明")
-        link = entry.get("link", "URL不明")
-        print(f"{published}｜{title}")
-        print(f"→ {link}\n")
+    logging.info(f"📡 {team_name}（RSS）")
+    headers = {
+        "User-Agent": "Mozilla/5.0 (compatible; BLeagueBot/1.0)"
+    }
 
-# HTMLスクレイピング方式
+    try:
+        response = requests.get(rss_url, headers=headers, timeout=10)
+        if response.status_code != 200:
+            logging.warning(f"{team_name} RSS取得失敗：{response.status_code}")
+            return
+
+        root = ET.fromstring(response.content)
+        items = root.findall(".//item")
+        logging.info(f"{team_name} RSS記事数: {len(items)}")
+
+        for item in items[:5]:
+            title = item.find("title").text
+            pubDate = item.find("pubDate").text
+            link = item.find("link").text
+            print(f"{pubDate}｜{title}\n→ {link}\n")
+
+    except Exception as e:
+        logging.error(f"{team_name} RSS処理中にエラー：{e}")
+
+# HTML取得
 def scrape_from_html(team_name, config):
-    print(f"\n🏀 {team_name}（HTML）")
-    print("-" * 40)
+    logging.info(f"🏀 {team_name}（HTML）")
     try:
         res = requests.get(config["url"], timeout=10)
         soup = BeautifulSoup(res.text, "html.parser")
         items = soup.select(config["item_selector"])
-        print(f"🔍 要素数: {len(items)}")
-
-        if not items:
-            print("⚠️ ニュース項目が見つかりません")
-            return
+        logging.info(f"{team_name} HTML記事数: {len(items)}")
 
         for item in items[:5]:
             title_tag = item.select_one(config["title_selector"])
@@ -65,19 +75,19 @@ def scrape_from_html(team_name, config):
                 title = title_tag.get_text(strip=True)
                 date = date_tag.get_text(strip=True)
                 url = config["base_url"] + link_tag["href"]
-
-                print(f"{date}｜{title}")
-                print(f"→ {url}\n")
+                print(f"{date}｜{title}\n→ {url}\n")
 
     except Exception as e:
-        print(f"[ERROR] {team_name} の取得に失敗：{e}")
+        logging.error(f"{team_name} HTML処理中にエラー：{e}")
 
-# 実行エントリーポイント
+# 実行本体
 if __name__ == "__main__":
     for team_name, config in TEAMS.items():
-        if config["type"] == "rss":
-            scrape_from_rss(team_name, config["rss_url"])
-        elif config["type"] == "scrape":
+        logging.info(f"[DEBUG] 処理中: {team_name}, type: {config.get('type')}")
+
+        if config.get("type") == "rss":
+            scrape_from_rss(team_name, config.get("rss_url", ""))
+        elif config.get("type") == "scrape":
             scrape_from_html(team_name, config)
         else:
-            print(f"⚠️ {team_name} のtype設定が不明です")
+            logging.warning(f"{team_name} のtypeが不明または未設定")
