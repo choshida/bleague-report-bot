@@ -9,8 +9,9 @@ def scrape_ryukyu_with_playwright():
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             page = browser.new_page()
-            page.goto("https://goldenkings.jp/news/", timeout=15000)
-            page.wait_for_selector(".newsList_item", timeout=10000)
+            page.goto("https://goldenkings.jp/news/", timeout=20000)
+            page.wait_for_load_state("networkidle")
+            page.wait_for_selector(".newsList_item", timeout=30000)
 
             items = page.query_selector_all(".newsList_item")[:5]
             logging.info(f"記事数: {len(items)}")
