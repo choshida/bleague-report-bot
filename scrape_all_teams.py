@@ -51,3 +51,31 @@ def scrape_team(name, config):
 if __name__ == "__main__":
     for team, config in TEAMS.items():
         scrape_team(team, config)
+        def scrape_team(name, config):
+    try:
+        res = requests.get(config["url"], timeout=10)
+        soup = BeautifulSoup(res.text, "html.parser")
+        items = soup.select(config["item_selector"])[:5]
+
+        print(f"🏀 {name}")
+        if not items:
+            print("⚠️ ニュース項目が見つかりませんでした\n")
+            return
+
+        hit = 0
+        for item in items:
+            title_tag = item.select_one(config["title_selector"])
+            date_tag = item.select_one(config["date_selector"])
+            link_tag = item.select_one(config["link_inside"])
+
+            if title_tag and date_tag and link_tag:
+                print(f"{date_tag.get_text(strip=True)}｜{title_tag.get_text(strip=True)}")
+                print(f"→ {config['base_url']}{link_tag['href']}\n")
+                hit += 1
+
+        if hit == 0:
+            print("⚠️ セレクタに一致する記事がありませんでした\n")
+        print("-" * 40)
+
+    except Exception as e:
+        print(f"[ERROR] {name} の取得に失敗しました：{e}")
