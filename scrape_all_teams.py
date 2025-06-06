@@ -11,7 +11,9 @@ def scrape_ryukyu_with_playwright():
             page = browser.new_page()
             page.goto("https://goldenkings.jp/news/", timeout=20000)
             page.wait_for_load_state("networkidle")
-            page.wait_for_selector(".newsList_item", timeout=30000)
+            page.mouse.wheel(0, 5000)  # スクロールでJS読み込み促進
+
+            page.wait_for_selector(".newsList_item", timeout=30000, state="attached")
 
             items = page.query_selector_all(".newsList_item")[:5]
             logging.info(f"記事数: {len(items)}")
