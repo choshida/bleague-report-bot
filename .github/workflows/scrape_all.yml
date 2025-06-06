@@ -22,3 +22,9 @@ jobs:
 
       - name: Run scraper
         run: python scrape_all_teams.py
+
+      - name: Upload screenshot
+        uses: actions/upload-artifact@v3
+        with:
+          name: ryukyu-screenshot
+          path: screenshot.png
